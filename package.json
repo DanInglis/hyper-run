@@ -1,0 +1,20 @@
+{
+  "name": "hyper-run",
+  "version": "0.1",
+  "description": "Run commands before Hyper starts",
+  "main": "index.js",
+  "repository": "DanInglis/hyper-run",
+  "author": "Dan dandaninglis@gmail.com",
+  "dependencies": {
+  },
+  "keywords": [
+    "hyper",
+    "hyper.app",
+    "hyperterm",
+    "hyper-plugin",
+    "hyperterm-plugin",
+    "plugin",
+    "run",
+    "startup"
+  ]
+}

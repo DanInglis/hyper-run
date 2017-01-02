@@ -10,6 +10,6 @@ If you want the screen to clear after the commands are done executing simply add
 Add hyper-run to the local plugins
 ```js
 localPlugins: [
-  'hyper-autohide-tabs'
+  'hyper-run'
 ]
 ```

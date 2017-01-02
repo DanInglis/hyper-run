@@ -13,3 +13,6 @@ localPlugins: [
   'hyper-run'
 ]
 ```
+
+## Known Bugs
+If hyper opens fine but does not run the commands try increasing the timeout constant. This delay needs to be different on different machines. 1000 is the lowest that works for me 

@@ -4,7 +4,8 @@ const {readFileSync} = require('fs')
 const {homedir} = require('os')
 const {resolve} = require('path')
 
-var commands
+var commands;
+const timeout = 1000;
 
 
 exports.onApp = (app) => {
@@ -18,5 +19,5 @@ exports.onWindow = function (win) {
             session.write(commands);
             session.write('\x0a');
         })
-    }, 1000)
+    }, timeout)
 };

@@ -1,23 +1,45 @@
 'use strict';
 
-const {readFileSync} = require('fs')
-const {homedir} = require('os')
-const {resolve} = require('path')
+let fs = require('fs');
+let loaded = false;
+let cmdDefault = [];	//winType = 0
+let cmdTab = [];		//winType = 1
+//let cmdWindow = [];		//winType = 2
 
-var commands;
-const timeout = 1000;
+let exists;
+
+//Gets called on change to the terminal
+exports.middleware = (store) => (next) => (action) => {
+	console.log(exists);	//outputs false
+	console.log(cmdDefault);
+	next(action);
+};
 
 
-exports.onApp = (app) => {
-  const path = resolve(homedir(), '.hyper_plugins/local/hyper-run/.hyper-run');
-  commands = readFileSync(path, 'utf8');
-}
+function waitForSessions(sessions, commands) {
+	if (!loaded) {
+		sessions.forEach(session => {
+			commands.forEach(cmd => {
+				session.write(cmd + '\r');
+			});
+			loaded = true;
+		});
+
+		setTimeout(() => waitForSessions(sessions, commands), 10);
+	}
+};
+
+//gets called on app startup
+exports.onApp = function (obj) {
+	const config = obj.config.getConfig();
+	if (config.hyperRun) {
+		cmdDefault = config.hyperRun
+	}
+	if (config.hyperRunTab){
+		cmdTab = config.hyperRunTab;
+	}
+};
 
 exports.onWindow = function (win) {
-	setTimeout(() => {
-        win.sessions.forEach(session => {
-            session.write(commands);
-            session.write('\x0a');
-        })
-    }, timeout)
+	waitForSessions(win.sessions, cmdDefault);
 };

@@ -1,44 +1,52 @@
 'use strict';
-///
-
-const { exec } = require('child_process');
 
 let curPid;
+let curUid;
 let uids = {};
 
-let cmdType = 0;
+let fs = require('fs');
+let cmdDefault = [];	//cmdTyper = 0
+let cmdTab = [];		//cmdType = 1
+//let cmdWindow = [];		//cmdType = 2
+
+let winType = 0;
+let running = false;
 
 
-const setCwd = (pid) =>
-  exec(`lsof -p ${pid} | grep cwd | tr -s ' ' | cut -d ' ' -f9-`, (err, cwd) => {
-    if (err) {
-      console.error(err);
-    } else {
-      cwd = cwd.trim();
-      store.dispatch({
-        type: 'SESSION_SET_CWD',
-        cwd
-      });
-    }
-  });
+
 
 exports.middleware = (store) => (next) => (action) => {
-	cmdType = 0;
 	console.log(action);
   switch (action.type) {
-    case 'SESSION_PTY_DATA':
-      if (curPid && uids[action.uid] === curPid) setCwd(curPid);
+  	case 'TERM_GROUP_REQUEST': 	//new tab/window
+  		//setCwd(curPid);
+  		//winType = 2;
+  		break;
+  	case 'SESSION_REQUEST':
+
+  		break;
+	case 'SESSION_PTY_DATA':
+      //if (curPid && uids[action.uid] === curPid) setCwd(curPid);
       break;
     case 'SESSION_ADD':
       uids[action.uid] = action.pid;
       curPid = action.pid;
-      setCwd(curPid);
+      curUid = action.uid;
+      //setCwd(curPid);
 
-      cmdType = 1;	//new tab
+      if (!running){
+      	winType = 0;
+      	running = true;
+      }
+      else{
+      	winType = 1;
+      }
+
+      
       break;
     case 'SESSION_SET_ACTIVE':
       curPid = uids[action.uid];
-      setCwd(curPid);
+      //setCwd(curPid);
       break;
     case 'SESSION_PTY_EXIT':
       delete uids[action.uid];
@@ -48,71 +56,18 @@ exports.middleware = (store) => (next) => (action) => {
       break;
   }
   next(action);
-};
+}
 
 
 
+function waitFor(object, key, fn) {
+	if (key in object) {
+ 		fn(object[key]);
+ 	} else {
+ 		setTimeout(() => waitFor(object, key, fn), 10);
+  	}
+  }
 
-////
-let fs = require('fs');
-let loaded = false;
-let cmdDefault = [];	//winType = 0
-let cmdTab = [];		//winType = 1
-//let cmdWindow = [];		//winType = 2
-
-
-//let cmdType = 1;
-
-
-function output(session) {
-
-	cmdDefault.forEach(cmd => {
-			session.write(cmd + '\r');
-		});
-
-	/*if(!loaded){
-		cmdDefault.forEach(cmd => {
-			session.write(cmd + '\r');
-		});
-		loaded = true;
-	}
-	
-	setTimeout(() => output(session), 10);
-
-		/*switch(cmdType){
-				case 0:
-				cmdDefault.forEach(cmd => {
-					session.write(cmd + '\r');
-				});
-				break;
-				case 1:
-				cmdTab.forEach(cmd => {
-					session.write(cmd + '\r');
-				});
-				break;
-			};*/
-
-	/*if (!loaded) {
-		sessions.forEach(session => {
-			switch(cmdType){
-				case 0:
-				cmdDefault.forEach(cmd => {
-					session.write(cmd + '\r');
-				});
-				break;
-				case 1:
-				cmdTab.forEach(cmd => {
-					session.write(cmd + '\r');
-				});
-				break;
-			}
-
-			loaded = true;
-		});
-
-		setTimeout(() => output(sessions), 10);
-	}*/
-};
 
 exports.onApp = function (obj) {
 	const config = obj.config.getConfig();
@@ -122,21 +77,41 @@ exports.onApp = function (obj) {
 	if (config.hyperRunTab){
 		cmdTab = config.hyperRunTab;
 	}
+	if (config.hyperRunWindow){
+		cmdWindow = config.hyperRunWindow;
+	}
 };
 
-exports.onWindow = function (win) {
-	//write(win.sessions);
-	//output(win.sessions);
+exports.onWindow = win => {
+ 	win.rpc.on('execute commands', ({uid, type}) => {
+ 		switch(type){
+ 			case 0:
+ 			cmdDefault.forEach(cmd => {
+ 				win.sessions.get(uid).write(cmd + '\r');
+ 			});
+ 			break;
+ 			case 1:
+ 			cmdTab.forEach(cmd => {
+ 				win.sessions.get(uid).write(cmd + '\r');
+ 			});
+ 			break;
+ 			case 2:
+ 			cmdWindow.forEach(cmd => {
+ 				win.sessions.get(uid).write(cmd + '\r');
+ 			});
+ 			break;
+ 		}
+ 	});
+ };
 
-	/*setTimeout(() => {
-        win.sessions.forEach(session => {
-            output(session);
-        })
-    }, 1000)*/
-
-	setTimeout(() => {
-		output(win.sessions.get(curPid));
-	}, 1000);
-
+exports.onRendererWindow = win => {
+ 	waitFor(win, 'rpc', rpc => {
+ 		rpc.on('session add', details => {
+ 			const { uid } = details;
+ 			const type = winType;
+ 			rpc.emit('execute commands', ({uid, type}));
+ 		});
+ 	});
 };
+
 

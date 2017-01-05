@@ -1,6 +1,6 @@
 {
   "name": "hyper-run",
-  "version": "0.1",
+  "version": "1.0",
   "description": "Run commands before Hyper starts",
   "main": "index.js",
   "repository": "DanInglis/hyper-run",
